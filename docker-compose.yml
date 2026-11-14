@@ -7,6 +7,7 @@ services:
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-sed}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./backend/demo-data.sql:/opt/sed/demo-data.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sed -d sed"]
       interval: 5s

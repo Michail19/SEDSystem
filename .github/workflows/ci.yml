@@ -64,6 +64,18 @@ jobs:
           done
           docker compose logs
           exit 1
+      - name: Seed demo data and verify repeatability
+        run: |
+          docker compose exec -T db psql -v ON_ERROR_STOP=1 -U sed -d sed -c "INSERT INTO purchase_requests(initiator,subject,description,amount,due_date,status) VALUES ('initiator','Existing record','Keep unchanged',123,CURRENT_DATE+1,'DRAFT')"
+          docker compose exec -T db psql -v ON_ERROR_STOP=1 -U sed -d sed -f /opt/sed/demo-data.sql
+          before=$(docker compose exec -T db psql -At -U sed -d sed -c "SELECT (SELECT count(*) FROM purchase_requests)||','||(SELECT count(*) FROM offers)||','||(SELECT count(*) FROM contracts)")
+          docker compose exec -T db psql -v ON_ERROR_STOP=1 -U sed -d sed -f /opt/sed/demo-data.sql
+          after=$(docker compose exec -T db psql -At -U sed -d sed -c "SELECT (SELECT count(*) FROM purchase_requests)||','||(SELECT count(*) FROM offers)||','||(SELECT count(*) FROM contracts)")
+          test "$before" = "$after"
+          test "$after" = "14,12,6"
+          docker compose exec -T db psql -At -U sed -d sed -c "SELECT count(*) FROM purchase_requests WHERE subject='Existing record' AND amount=123" | grep -qx 1
+          curl -fsS -u supplier1:demo123 http://localhost:5173/api/offers | python3 -c "import json,sys; assert any(x['status']=='NEED_INFO' for x in json.load(sys.stdin))"
+          curl -fsS -u manager:demo123 http://localhost:5173/api/contracts | python3 -c "import json,sys; assert {'DRAFT','REVIEW','REVISION','APPROVED','ACTIVE','CLOSED'} <= {x['status'] for x in json.load(sys.stdin)}"
       - name: Stop services
         if: always()
         run: docker compose down -v
