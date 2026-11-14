@@ -2,7 +2,7 @@ import React, {useEffect,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {LayoutDashboard, FileText, ShoppingCart, ClipboardList, FileCheck2, Bell, LogOut, Plus, ArrowRight, X, Layers, Menu, Download} from 'lucide-react';
 import './style.css';
-const API=import.meta.env.VITE_API_URL||'http://localhost:8080/api';
+const API=import.meta.env.VITE_API_URL||'/api';
 const roles={INITIATOR:'Инициатор',BUYER:'Специалист по закупкам',CONTRACTOR:'Специалист по договорам',MANAGER:'Согласующее лицо',SUPPLIER:'Поставщик'};
 const statuses={DRAFT:'Черновик',REVIEW:'На согласовании',REVISION:'На доработке',APPROVED:'Согласована',OPEN:'Приём предложений',COMPLETED:'Завершена',UNDER_REVIEW:'На рассмотрении',NEED_INFO:'Ожидает уточнения',ACCEPTED:'Допущено',REJECTED:'Отклонено',CLOSED_NO_REPLY:'Закрыто без ответа',PENDING:'Ожидает решения',RETURNED:'Возвращено на доработку',WINNER:'Поставщик выбран',NO_WINNER:'Без победителя',ACTIVE:'Исполняется',CLOSED:'Закрыт',SIMULATED:'Имитация передачи'};
 const names={requests:'Заявки',procedures:'Закупки',offers:'Предложения',results:'Результаты',contracts:'Договоры',notifications:'Уведомления'};

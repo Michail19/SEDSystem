@@ -24,3 +24,12 @@ curl -fsS -u contractor:demo123 "$base/contracts" | python3 -c 'import json,sys;
 code=$(curl -s -o /dev/null -w '%{http_code}' -u supplier1:demo123 -X POST -H 'Content-Type: application/json' -d '{}' "$base/requests/1/approve")
 test "$code" = 403
 printf '%s\n' 'Сквозной сценарий и проверка прав пройдены.'
+
+# CORS for separately hosted clients: preflight must not require credentials.
+headers=$(mktemp)
+trap 'rm -f "$headers"' EXIT
+code=$(curl -s -o /dev/null -D "$headers" -w '%{http_code}' -X OPTIONS "$base/me" -H 'Origin: http://localhost:5173' -H 'Access-Control-Request-Method: GET' -H 'Access-Control-Request-Headers: authorization')
+test "$code" = 200
+tr -d '\r' < "$headers" | grep -qi '^Access-Control-Allow-Origin: http://localhost:5173$'
+tr -d '\r' < "$headers" | grep -qi '^Access-Control-Allow-Headers: .*authorization'
+printf '%s\n' 'CORS preflight для разрешённого источника пройден.'

@@ -19,7 +19,7 @@
 docker compose up --build
 ```
 
-Откройте http://localhost:5173. Сервер доступен на http://localhost:8080, база данных хранится в Docker volume `postgres_data`. Остановить контейнеры: `docker compose down`. Команда `docker compose down -v` также удаляет учебные данные.
+Откройте http://localhost:5173. Клиент обращается к API через `/api` на том же адресе; Nginx перенаправляет запросы серверу внутри Compose. Сервер также доступен напрямую на http://localhost:8080, база данных хранится в Docker volume `postgres_data`. Остановить контейнеры: `docker compose down`. Команда `docker compose down -v` также удаляет учебные данные.
 
 Для демонстрации доступны учётные записи `initiator`, `buyer`, `contractor`, `manager`, `supplier1`, `supplier2`; у всех пароль по умолчанию `demo123`. В форме входа роль выбирается из списка. При необходимости задайте переменные в `.env`: `DEMO_PASSWORD` и `DATABASE_PASSWORD`; см. `.env.example`. Это общий пароль демонстрационных аккаунтов, не корпоративная аутентификация.
 
