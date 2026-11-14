@@ -22,5 +22,5 @@ class SecurityConfig {
  User.withUsername("supplier1").password(e.encode(p)).roles("SUPPLIER").build(),
  User.withUsername("supplier2").password(e.encode(p)).roles("SUPPLIER").build());}
  @Bean SecurityFilterChain security(HttpSecurity h) throws Exception {return h.cors(Customizer.withDefaults()).csrf(c->c.disable()).sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).authorizeHttpRequests(a->a.anyRequest().authenticated()).httpBasic(Customizer.withDefaults()).build();}
- @Bean CorsConfigurationSource cors(@Value("${app.cors-origin}") String origin){CorsConfiguration c=new CorsConfiguration();c.setAllowedOrigins(List.of(origin));c.setAllowedMethods(List.of("GET","POST","PUT","OPTIONS"));c.setAllowedHeaders(List.of("Authorization","Content-Type"));var s=new UrlBasedCorsConfigurationSource();s.registerCorsConfiguration("/**",c);return s;}
+ @Bean CorsConfigurationSource corsConfigurationSource(@Value("${app.cors-origin}") String origin){CorsConfiguration c=new CorsConfiguration();c.setAllowedOrigins(List.of(origin));c.setAllowedMethods(List.of("GET","POST","PUT","OPTIONS"));c.setAllowedHeaders(List.of("Authorization","Content-Type"));var s=new UrlBasedCorsConfigurationSource();s.registerCorsConfiguration("/**",c);return s;}
 }
