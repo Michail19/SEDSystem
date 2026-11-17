@@ -1,0 +1,81 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: sed
+          POSTGRES_USER: sed
+          POSTGRES_PASSWORD: sed
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sed -d sed"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - run: mvn -B verify
+        working-directory: backend
+      - name: Сквозной сценарий с PostgreSQL
+        working-directory: backend
+        run: |
+          java -jar target/backend-0.1.0.jar > /tmp/sed-server.log 2>&1 &
+          server_pid=$!
+          trap 'cat /tmp/sed-server.log; kill "$server_pid" || true' EXIT
+          for attempt in {1..60}; do
+            if curl -s -u initiator:demo123 http://localhost:8080/api/me | grep -q initiator; then break; fi
+            sleep 2
+          done
+          bash smoke-test.sh
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start services
+        run: docker compose up --build -d
+      - name: Check frontend proxy
+        run: |
+          for attempt in {1..90}; do
+            if curl -fsS -u initiator:demo123 http://localhost:5173/api/me | grep -q initiator; then exit 0; fi
+            sleep 2
+          done
+          docker compose logs
+          exit 1
+      - name: Seed demo data and verify repeatability
+        run: |
+          docker compose exec -T db psql -v ON_ERROR_STOP=1 -U sed -d sed -c "INSERT INTO purchase_requests(initiator,subject,description,amount,due_date,status) VALUES ('initiator','Existing record','Keep unchanged',123,CURRENT_DATE+1,'DRAFT')"
+          docker compose exec -T db psql -v ON_ERROR_STOP=1 -U sed -d sed -f /opt/sed/demo-data.sql
+          before=$(docker compose exec -T db psql -At -U sed -d sed -c "SELECT (SELECT count(*) FROM purchase_requests)||','||(SELECT count(*) FROM offers)||','||(SELECT count(*) FROM contracts)")
+          docker compose exec -T db psql -v ON_ERROR_STOP=1 -U sed -d sed -f /opt/sed/demo-data.sql
+          after=$(docker compose exec -T db psql -At -U sed -d sed -c "SELECT (SELECT count(*) FROM purchase_requests)||','||(SELECT count(*) FROM offers)||','||(SELECT count(*) FROM contracts)")
+          test "$before" = "$after"
+          test "$after" = "14,12,6"
+          docker compose exec -T db psql -At -U sed -d sed -c "SELECT count(*) FROM purchase_requests WHERE subject='Existing record' AND amount=123" | grep -qx 1
+          curl -fsS -u supplier1:demo123 http://localhost:5173/api/offers | python3 -c "import json,sys; assert any(x['status']=='NEED_INFO' for x in json.load(sys.stdin))"
+          curl -fsS -u manager:demo123 http://localhost:5173/api/contracts | python3 -c "import json,sys; assert {'DRAFT','REVIEW','REVISION','APPROVED','ACTIVE','CLOSED'} <= {x['status'] for x in json.load(sys.stdin)}"
+      - name: Stop services
+        if: always()
+        run: docker compose down -v
